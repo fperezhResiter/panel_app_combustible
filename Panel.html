@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Control de abastecimientos, consumo y rendimiento de la flota Resiter.">
+  <title>Combustible · Resiter Driver</title>
+  <link rel="icon" href="web/img/logo_sin_fondo_resiter.png">
+  <link rel="stylesheet" href="web/css/panel.css">
+  <link rel="stylesheet" href="web/css/combustible.css">
+  <script src="web/publicado/combustible.js" defer></script>
+  <script src="web/js/metricas.js" defer></script>
+  <script src="web/vendor/pdf-lib.min.js" defer></script>
+  <script src="web/js/logo-pdf.js" defer></script>
+  <script src="web/js/informe-pdf.js" defer></script>
+  <script src="web/js/combustible.js" defer></script>
+</head>
+<body data-vista="inicio">
+  <header>
+    <img class="logo" src="web/img/logo_sin_fondo_resiter.png" alt="Resiter">
+    <h1>Control de combustible<span>Resiter Driver</span></h1>
+    <div class="acciones-cabecera"><div class="modos-agrupacion" id="modos-agrupacion" role="group" aria-label="Modo de agrupación" hidden><button type="button" data-mode="zona" aria-pressed="true">Modo zona</button><button type="button" data-mode="region" aria-pressed="false">Modo región</button></div><span class="modo" id="modo">Consulta local</span><button id="actualizar-bd" type="button" hidden>↻ Actualizar BD</button><a class="volver-inicio" id="volver-inicio" href="#inicio">Inicio</a></div>
+    <p class="publicacion-header" id="publicacion">Cargando publicación…</p>
+  </header>
+  <nav class="navegacion-paneles" aria-label="Vistas del panel">
+    <a href="#resumen" data-tab="resumen">Resumen</a>
+    <a href="#consumo" data-tab="consumo">Consumo y evolución</a>
+    <a href="#rendimiento" data-tab="rendimiento">Rendimiento de equipos</a>
+    <a href="#estados" data-tab="estados">Estados</a>
+    <a href="#registros" data-tab="registros">Registro de abastecimientos</a>
+    <a href="#fuentes" data-tab="fuentes">Fuentes y criterios</a>
+    <a href="#configuraciones" data-tab="configuraciones" data-interactive hidden>Configuraciones</a>
+    <span class="nav-caption">GESTIÓN MINERÍA</span>
+  </nav>
+  <form class="filtros" id="filtros" aria-label="Filtros del panel" hidden>
+    <div class="filtros-principales">
+      <label>Mes<select id="f-mes" data-filter="mes"><option value="">Todos los meses</option></select></label>
+      <label id="campo-zona">Zona<select id="f-zona" data-filter="zona"><option value="">Todas las zonas</option></select></label>
+      <label id="campo-region" hidden>Región<select id="f-region" data-filter="region"><option value="">Todas las regiones</option></select></label>
+      <label>Unidad<select id="f-unidad" data-filter="unidad"><option value="">Todas las unidades</option></select></label>
+      <label id="campo-linea">Línea de negocio<select id="f-linea" data-filter="linea"><option value="">Todas las líneas</option></select></label>
+      <label>Tipo de unidad<select id="f-tipo_unidad" data-filter="tipo_unidad"><option value="">Todos los tipos</option></select></label>
+      <label>Placa<select id="f-placa" data-filter="placa"><option value="">Todas las placas</option></select></label>
+    </div>
+    <div class="filtros-secundarios" id="filtros-extra" hidden>
+      <label>Desde<input type="date" id="f-desde" data-filter="desde"></label>
+      <label>Hasta<input type="date" id="f-hasta" data-filter="hasta"></label>
+      <label>Estado<select id="f-estado" data-filter="estado"></select></label>
+      <label>Tipo de abastecimiento<select id="f-tipo_abast" data-filter="tipo_abast"></select></label>
+      <label>Tipo de equipo<select id="f-tipo_equipo" data-filter="tipo_equipo"></select></label>
+      <label>Fuente<select id="f-fuente" data-filter="fuente"></select></label>
+    </div>
+    <div class="filter-toolbar">
+      <button type="button" class="text-button" id="mas-filtros" aria-expanded="false" aria-controls="filtros-extra">+ Más filtros</button>
+      <label class="busqueda"><span class="sr-only">Buscar placa, conductor o unidad</span><input type="search" id="f-buscar" placeholder="Buscar placa, conductor o unidad…" data-filter="buscar"></label>
+      <div class="acciones-filtros"><button type="submit" class="primario">Consultar</button><button type="button" id="descargar-csv">Descargar CSV</button><button type="button" id="descargar-pdf">Descargar PDF</button><button type="button" id="limpiar">Limpiar</button></div>
+    </div>
+  </form>
+  <main class="portal">
+    <div class="intro portal-intro" id="intro-vista">
+      <div><p class="eyebrow" id="contexto-vista">GESTIÓN DE COMBUSTIBLE</p><h2 id="titulo-vista" tabindex="-1">Paneles de seguimiento</h2><p id="periodo">Selecciona la vista que quieres consultar.</p></div>
+      <span class="period-badge" id="seleccion" hidden>Todos los registros</span>
+    </div>
+    <div id="aviso-muestra" class="aviso" hidden><span class="aviso-icon" aria-hidden="true">i</span><div><strong>Vista inicial con tus 4 registros de muestra</strong><p>Esta publicación contiene datos de demostración.</p><p data-interactive hidden>Agrega los Excel a <b>Fuentes</b> y ejecuta <b>Actualizar_BD.bat</b> para publicar tu registro completo.</p></div><a href="#fuentes">Ver fuentes →</a></div>
+    <p id="estado" role="status" aria-live="polite"></p>
+    <section id="vista-inicio" data-view="inicio" aria-label="Todas las vistas del panel">
+      <div class="paneles">
+        <a class="panel-enlace" href="#resumen">
+          <div class="panel-cabecera"><span class="panel-icono" aria-hidden="true">01</span><span class="badge">Disponible</span></div>
+          <h3>Resumen de combustible</h3><p>Indicadores generales y resumen expandible por zona o región, unidad y equipo.</p><span class="panel-accion">Abrir panel <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="panel-enlace" href="#consumo">
+          <div class="panel-cabecera"><span class="panel-icono" aria-hidden="true">02</span><span class="badge">Disponible</span></div>
+          <h3>Consumo y evolución</h3><p>Consumo por zona, región, unidad o línea de negocio e historial de abastecimientos por fecha.</p><span class="panel-accion">Abrir panel <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="panel-enlace" href="#rendimiento">
+          <div class="panel-cabecera"><span class="panel-icono" aria-hidden="true">03</span><span class="badge">Disponible</span></div>
+          <h3>Rendimiento de equipos</h3><p>Rendimiento por fecha y placa, junto con la tabla de equipos y su rendimiento ponderado.</p><span class="panel-accion">Abrir panel <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="panel-enlace" href="#estados">
+          <div class="panel-cabecera"><span class="panel-icono" aria-hidden="true">04</span><span class="badge">Disponible</span></div>
+          <h3>Estado de abastecimientos</h3><p>Distribución de estados, registros pendientes y acceso al detalle de la selección.</p><span class="panel-accion">Abrir panel <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="panel-enlace" href="#registros">
+          <div class="panel-cabecera"><span class="panel-icono" aria-hidden="true">05</span><span class="badge">Disponible</span></div>
+          <h3>Registro de abastecimientos</h3><p>Consulta cada abastecimiento, revisa su detalle y descarga los registros filtrados.</p><span class="panel-accion">Abrir panel <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="panel-enlace" href="#fuentes">
+          <div class="panel-cabecera"><span class="panel-icono" aria-hidden="true">06</span><span class="badge">Disponible</span></div>
+          <h3>Fuentes y criterios</h3><p>Archivos publicados, criterios de cálculo, calidad de datos y asociaciones de zona y región.</p><span class="panel-accion">Abrir panel <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="panel-enlace" href="#configuraciones" data-interactive hidden>
+          <div class="panel-cabecera"><span class="panel-icono" aria-hidden="true">07</span><span class="badge">Interactivo</span></div>
+          <h3>Configuraciones</h3><p>Selecciona las zonas, regiones y unidades que se mostrarán en los paneles.</p><span class="panel-accion">Configurar paneles <span aria-hidden="true">→</span></span>
+        </a>
+      </div>
+      <p class="nota-navegacion">Los filtros se conservan al cambiar de vista. Usa Limpiar dentro de cualquier vista de datos para consultar todos los registros.</p>
+    </section>
+    <section id="vista-resumen" data-view="resumen" hidden>
+      <section class="kpis combustible-kpis" aria-label="Indicadores de la selección">
+        <article class="kpi" data-color="azul"><span>N.º de abastecimientos</span><strong id="k-registros">—</strong><small>Registros de la selección</small></article>
+        <article class="kpi" data-color="azul"><span>Consumo total</span><strong id="k-galones">—</strong><small>Litros registrados</small></article>
+        <article class="kpi" data-color="verde"><span>Equipos activos</span><strong id="k-equipos">—</strong><small>Placas con abastecimientos</small></article>
+        <article class="kpi" data-color="verde"><span>Rendimiento ponderado</span><strong id="k-rendimiento">—</strong><small>km/L · Σ km / Σ L válidos</small></article>
+        <article class="kpi" data-color="amarillo"><span>Validación pendiente</span><strong id="k-pendientes">—</strong><small>Según el estado del registro</small></article>
+        <article class="kpi" data-color="neutro"><span>Registros con observaciones</span><strong id="k-alertas">—</strong><small>Validaciones de calidad de datos</small></article>
+      </section>
+      <section class="tarjeta tabla-tarjeta">
+        <div class="titulo resumen-titulo"><div><h3 id="resumen-titulo">Resumen por zona y unidad</h3><p id="resumen-ayuda">Expande una unidad para ver sus equipos.</p></div><div class="acciones-resumen"><button id="expandir" type="button" aria-expanded="false" aria-controls="resumen-body">Expandir todo</button><button id="mostrar-linea" type="button" aria-pressed="false" aria-controls="resumen-body">Mostrar línea</button></div></div>
+        <div class="scroll" id="resumen-scroll" tabindex="0" aria-label="Resumen por zona, unidad y placa"><table><thead><tr><th scope="col" id="resumen-columna">Zona / Unidad / Placa</th><th scope="col">Abastecimientos</th><th scope="col">Litros</th><th scope="col">KM recorridos</th><th scope="col">Rendim. km/L</th></tr></thead><tbody id="resumen-body"></tbody><tfoot id="resumen-total"></tfoot></table></div>
+      </section>
+    </section>
+    <section id="vista-consumo" data-view="consumo" hidden>
+      <div class="dashboard-grid">
+        <article class="tarjeta consumo-card">
+          <div class="titulo"><div><h3>Consumo de combustible</h3><p id="nivel">Por unidad</p></div><span class="chart-unit">Litros / abastecimientos</span></div>
+          <div class="chart-pad"><div class="chart-legend"><span><i class="dot blue"></i>Consumo (L)</span><span><i class="line-swatch"></i>N.º de abastecimientos</span></div><div id="grafico-consumo" class="grafico" aria-label="Consumo y abastecimientos por grupo"></div></div>
+        </article>
+        <article class="tarjeta historial-card">
+          <div class="titulo"><div><h3>Historial de abastecimientos</h3><p>Consumo y registros por día</p></div></div>
+          <div class="chart-pad"><div id="grafico-historial" class="grafico"></div><div class="chart-legend"><span><i class="line-swatch"></i>Consumo (L)</span><span><i class="dot grey"></i>N.º de registros</span></div></div>
+        </article>
+      </div>
+    </section>
+    <section id="vista-rendimiento" data-view="rendimiento" hidden>
+      <div class="dashboard-grid">
+        <article class="tarjeta rendimiento-card">
+          <div class="titulo"><div><h3>Rendimiento por fecha y placa</h3><p>KM recorridos / litros del registro</p></div></div>
+          <div class="chart-pad"><div id="grafico-rendimiento" class="grafico"></div><p class="card-note">Solo registros con KM ≥ 0 y litros &gt; 0.</p></div>
+        </article>
+        <article class="tarjeta ranking-card">
+          <div class="titulo"><div><h3>Rendimiento por equipo</h3><p>Promedio ponderado · km/L</p></div><span class="chart-unit" id="ranking-count"></span></div>
+          <div class="ranking-scroll scroll" tabindex="0" aria-label="Tabla de rendimiento por equipo"><table class="ranking"><thead><tr><th scope="col"><button data-sort="placa">Placa</button></th><th scope="col">Tipo de equipo</th><th scope="col"><button data-sort="n">N.º</button></th><th scope="col"><button data-sort="rendimiento">km/L ↓</button></th><th scope="col"><button data-sort="galones">Litros</button></th></tr></thead><tbody id="ranking-body"></tbody><tfoot id="ranking-total"></tfoot></table></div>
+          <p class="card-note">Selecciona una placa para explorar sus registros.</p>
+        </article>
+      </div>
+    </section>
+    <section id="vista-estados" data-view="estados" hidden>
+      <div class="registro-summary" id="estados-summary"></div>
+      <article class="tarjeta estado-card">
+        <div class="titulo"><div><h3>Estado de los registros</h3><p>Selecciona un estado para filtrar los abastecimientos en todas las vistas.</p></div></div>
+        <div id="grafico-estados" class="status-chart"></div>
+        <p class="card-note"><a href="#registros">Ver registros de la selección →</a></p>
+      </article>
+    </section>
+    <div class="chart-navigation" id="navegacion-graficos" hidden><p id="chart-context"></p><button id="nivel-anterior" type="button" hidden>← Ir al nivel anterior</button><button id="quitar-seleccion" type="button" hidden>Quitar selección de fecha / placa</button></div>
+    <section id="vista-registros" data-view="registros" hidden>
+      <div class="registro-summary" id="registro-summary"></div>
+      <article class="tarjeta"><div class="titulo"><div><h3>Registro de abastecimientos</h3><p>Todas las columnas originales están disponibles en el detalle y la descarga CSV.</p></div><span id="registros-count" class="chart-unit"></span></div>
+        <div class="scroll" tabindex="0" aria-label="Registros de combustible"><table class="registros"><thead><tr><th scope="col">Fecha / hora</th><th scope="col">Placa / marca</th><th scope="col">Conductor</th><th scope="col">Unidad</th><th scope="col">KM recorridos</th><th scope="col">Litros</th><th scope="col">km/L</th><th scope="col">Abastecimiento</th><th scope="col">Estado</th><th scope="col">Detalle</th></tr></thead><tbody id="registros-body"></tbody></table></div>
+        <div class="pagination"><span id="pagina-info"></span><button id="pagina-anterior" type="button">← Anterior</button><button id="pagina-siguiente" type="button">Siguiente →</button></div>
+      </article>
+    </section>
+    <section id="vista-fuentes" data-view="fuentes" hidden>
+      <div class="fuentes-grid">
+        <article class="tarjeta" data-interactive hidden><div class="titulo"><h3>Actualizar BD y generar el panel</h3></div><div class="contenido"><ol class="pasos"><li><strong>Abre el modo interactivo</strong><p>Ejecuta <b>Iniciar_Panel.bat</b> y mantén su ventana abierta para guardar configuraciones y actualizar desde el navegador.</p></li><li><strong>Prepara los archivos de Fuentes</strong><p>Agrega Excel .xls / .xlsx / .xlsm o CSV, también en subcarpetas. Guarda y cierra los libros. La carpeta se lee completa en cada actualización: conserva los archivos históricos que quieras consultar.</p></li><li><strong>Selecciona qué mostrar</strong><p>En <a href="#configuraciones">Configuraciones</a>, marca o desmarca zonas y sus unidades, y luego regiones y sus unidades. Cada cambio se guarda en la BD. Las selecciones de ambos modos son independientes y quedan pendientes de publicación.</p></li><li><strong>Ejecuta Actualizar BD</strong><p>Pulsa <b>Actualizar BD</b> en la cabecera, o ejecuta <b>Actualizar_BD.bat</b>. Se releen las fuentes y asociaciones, se conservan las selecciones guardadas y se generan la BD y la publicación con la información seleccionada.</p></li><li><strong>Consulta la nueva publicación</strong><p>El botón recarga los datos del panel al terminar. Si usaste Actualizar_BD.bat, recarga el navegador. <b>Panel.html</b> abierto con doble clic muestra esa misma publicación con las selecciones aplicadas, sin servidor.</p></li></ol><p class="muted">Si falta una dependencia, ejecuta Iniciar_Primera_Vez.bat. Si una fuente falla o no hay archivos válidos, se conserva la publicación anterior y los cambios guardados siguen pendientes. Los archivos fuente se conservan sin cambios.</p></div></article>
+        <article class="tarjeta"><div class="titulo"><h3>Criterios de cálculo</h3></div><dl class="criterios"><dt>Consumo</dt><dd>Suma de litros válidos y no negativos. Se conservan los valores numéricos registrados en la fuente.</dd><dt>Rendimiento ponderado</dt><dd>Σ KM recorridos / Σ litros, usando solo las mismas filas con KM ≥ 0 y litros &gt; 0. No se promedian rendimientos.</dd><dt>Préstamos</dt><dd>Si Préstamo es Sí, solo ese registro se atribuye al CECO préstamo y a su zona y región. Los demás registros de la patente conservan su unidad original. Sin CECO préstamo, queda SIN UNIDAD con una observación para revisar. El detalle y el CSV conservan el CECO de origen.</dd><dt>Equipos y estados</dt><dd>Equipos = placas únicas no vacías. Pendientes = estado “Pendiente”. Los estados originales se conservan.</dd><dt>Zonas, regiones y equipos</dt><dd>Se cruza la patente con la hoja 01 MAESTRO: zona, línea de negocio, CECO ACTIVO FIJO y TIPO DECLARADO. Para el tipo se usa la primera fila de cada patente. En préstamos prevalece el CECO préstamo y su zona/región; el tipo sigue siendo el del equipo. Sin coincidencia se conservan las asociaciones de la fuente y catálogos, con una observación. La región se resuelve con los catálogos de unidades. Si no se encuentra una línea, se muestra Sin línea; no se usa la División como reemplazo.</dd><dt>Importes</dt><dd>Se conservan en S/. según el registro. Sin precio o total se muestra “—”; no se convierte el vacío en cero.</dd><dt>Observaciones</dt><dd>Fecha, hora, placa o números inválidos; litros no positivos; diferencias de rendimiento mayores a 0,011; misma fecha, hora y placa con valores distintos. No son alertas operacionales.</dd></dl></article>
+      </div>
+      <article class="tarjeta tabla-tarjeta"><div class="titulo"><div><h3>Archivos de la publicación</h3><p id="fuentes-meta"></p></div></div><div class="scroll"><table><thead><tr><th>Archivo</th><th>Filas leídas</th><th>Columnas ausentes</th></tr></thead><tbody id="fuentes-body"></tbody></table></div><p class="card-note" id="duplicados-info"></p></article>
+      <article class="tarjeta" id="maestro-card" hidden><div class="titulo"><h3>Maestro de equipos móviles</h3></div><div id="maestro-info" class="contenido"></div></article>
+      <article class="tarjeta tabla-tarjeta"><div class="titulo"><h3>Calidad de la publicación completa</h3></div><div id="calidad" class="contenido"></div></article>
+      <article class="tarjeta tabla-tarjeta"><div class="titulo"><h3>Asociaciones de zona y región</h3></div><div id="asociaciones" class="contenido"></div></article>
+    </section>
+    <section id="vista-configuraciones" data-view="configuraciones" hidden>
+      <article class="tarjeta">
+        <div class="titulo"><div><h3>Visibilidad de los paneles</h3><p>Una casilla marcada indica Sí: mostrar. Desmarcada indica No: ocultar.</p></div></div>
+        <div class="contenido configuracion-ayuda"><p>Cada selección se guarda automáticamente en la BD. Pulsa <b>Actualizar BD</b> en la cabecera para generar los paneles con los cambios guardados.</p><p>Zona y región tienen selecciones independientes. Ocultar un grupo oculta sus unidades en ese modo; al mostrarlo de nuevo, se conservan las casillas de cada unidad. También se muestran unidades del catálogo que aún no tienen registros.</p></div>
+        <div class="configuracion-toolbar"><div class="configuracion-modos" role="group" aria-label="Configuración por modo"><button type="button" data-config-mode="zona" aria-pressed="true">Modo zona</button><button type="button" data-config-mode="region" aria-pressed="false">Modo región</button></div><button type="button" id="recargar-configuracion">Recargar configuración</button></div>
+        <p id="configuracion-estado" class="configuracion-estado" role="status" aria-live="polite">Cargando configuración…</p>
+      </article>
+      <div id="configuracion-grupos" class="configuracion-grupos" aria-label="Grupos y unidades configurables"></div>
+    </section>
+    <footer><span>Resiter Driver · Control de combustible</span><span>Base visual y estructura: Panel Codelco</span></footer>
+  </main>
+  <dialog id="detalle-dialog" aria-labelledby="detalle-titulo"><div class="dialog-header"><div><p class="eyebrow">REGISTRO DE ABASTECIMIENTO</p><h2 id="detalle-titulo"></h2></div><button id="cerrar-detalle" aria-label="Cerrar detalle" type="button">✕</button></div><div id="detalle-contenido"></div></dialog>
+  <div id="tooltip" role="tooltip" hidden></div>
+  <noscript>Activa JavaScript para consultar el dashboard de combustible.</noscript>
+</body>
+</html>
